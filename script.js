@@ -1,11 +1,100 @@
-function Gameboard() {
-  const board = ["", "", "", "", "", "", "", "", ""];
+const message = document.querySelector(".messages");
+let activePlayer;
+let players;
+let board;
+let turnCount;
+let divBoard;
+const switchPlayerTurn = () => {
+  activePlayer = activePlayer === players[0] ? players[1] : players[0];
+};
 
-  const showMark = (cell, mark) => {
-    board[cell] = mark;
+const initializeGLobalVars = () => {
+  players = [];
+  board = ["", "", "", "", "", "", "", "", ""];
+  turnCount = 0;
+  divBoard = [];
+};
+
+const UI = () => {
+  const startGameButton = document.getElementById("startGame");
+  const start = document.getElementById("start");
+  const userInfo = document.getElementById("userInfo");
+  const gameGrid = document.querySelector(".gameGrid");
+
+  startGameButton.addEventListener("click", () => {
+    userInfo.showModal();
+    start.addEventListener("click", startGame);
+  });
+  const startGame = (event) => {
+    event.preventDefault();
+    initializeGLobalVars();
+    const { playRound, assignmarks, createPlayers, initializePlayer } =
+      GameController();
+
+    gameGrid.innerHTML = "";
+
+    const userName = document.getElementById("name-input").value;
+    const userMark = document.querySelector(
+      'input[name="userMark"]:checked'
+    ).value;
+    userInfo.close();
+    assignmarks(userMark);
+    createPlayers(userName, userMark);
+    initializePlayer(userMark);
+    showGame(divBoard, userName, userMark);
+    playRound();
   };
 
-  const checkWin = (board) => {
+  const showGame = () => {
+    for (i = 0; i < 9; i++) {
+      const div = document.createElement("div");
+      divBoard.push(div);
+      div.id = i;
+      gameGrid.appendChild(div);
+      div.addEventListener("click", userPlayTurn);
+    }
+  };
+
+  const userPlayTurn = (event) => {
+    const { updateBoard, checkWin } = Gameboard();
+    const { playRound } = GameController();
+
+    if (event.target.textContent === "" && activePlayer.name !== "Computer") {
+      let userChoiceIndex = event.target.id;
+      updateBoard(userChoiceIndex, activePlayer.mark);
+      turnCount++;
+      if (checkWin()) {
+        message.textContent = `${activePlayer.name} wins!`;
+        endGame();
+        return;
+      }
+      if (turnCount >= 9) {
+        message.textContent = "Game is even!";
+        endGame();
+        return;
+      }
+      switchPlayerTurn();
+      playRound();
+    } else {
+      message.textContent = "Already taken. Please choose another cell";
+    }
+  };
+
+  const endGame = () => {
+    divBoard.forEach((div) => {
+      div.removeEventListener("click", userPlayTurn);
+    });
+  };
+  return { endGame };
+};
+
+function Gameboard() {
+  const updateBoard = (cell, mark) => {
+    board[cell] = mark;
+    divBoard[cell].textContent = mark;
+  };
+
+  const checkWin = () => {
     for (let i = 0; i < 3; i++) {
       if (
         board[i * 3] !== "" &&
@@ -36,69 +125,65 @@ function Gameboard() {
     return null;
   };
 
-  return { board, showMark, checkWin };
+  return { updateBoard, checkWin };
 }
 
-function GameController(player, computer) {
-  const { board, showMark, checkWin } = Gameboard();
+function GameController() {
+  const { updateBoard, checkWin } = Gameboard();
 
-  const players = [
-    {
-      name: "User",
-      mark: "X",
-    },
-    {
-      name: "Computer",
-      mark: "O",
-    },
-  ];
+  let computerMark;
 
-  let activePlayer = "User";
-
-  const switchPlayerTurn = () => {
-    activePlayer = activePlayer === "User" ? "Computer" : "User";
+  let assignmarks = (playerMark) => {
+    computerMark = playerMark === "X" ? "O" : "X";
   };
 
-  const getComputerChoice = () => {
-    const randomIndex = Math.floor(Math.random() * 9);
-    return randomIndex;
+  let createPlayers = (playerName, playerMark) => {
+    players = [
+      { name: playerName, mark: playerMark },
+      { name: "Computer", mark: computerMark },
+    ];
   };
 
-  const getPlayerChoice = (player) => {
-    let cellNumber;
-    if (player === "Computer") {
-      let randomIndex;
-      do {
-        randomIndex = Math.floor(Math.random() * 9);
-      } while (board[randomIndex] !== "");
-      return randomIndex;
-    } else {
-      cellNumber = Number(window.prompt("Choose a cell", ""));
-      return cellNumber;
+  let initializePlayer = (playerMark) => {
+    activePlayer = playerMark === "X" ? players[0] : players[1];
+  };
+
+  const computerTurn = () => {
+    let randomIndex;
+    do {
+      randomIndex = Math.floor(Math.random() * 9);
+    } while (board[randomIndex] !== "");
+    updateBoard(randomIndex, activePlayer.mark);
+    turnCount++;
+    if (checkWin()) {
+      message.textContent = `${activePlayer.name} wins!`;
+      uiInstance.endGame();
+      return;
     }
+    if (turnCount >= 9) {
+      message.textContent = "Game is even!";
+      uiInstance.endGame();
+      return;
+    }
+    switchPlayerTurn();
+    playRound();
   };
-
-  const playTurn = () => {
-    const cellNumber = getPlayerChoice(activePlayer.name);
-    showMark(cellNumber, activePlayer.mark);
-  };
-
-  let turnCount = 0;
 
   const playRound = () => {
-    while (turnCount < 9) {
-      playTurn();
-      if (checkWin(board)) {
-        console.log(`${checkWin(board) === "X" ? player : computer} wins!`);
-        return;
-      }
-      switchPlayerTurn();
-      turnCount++;
+    if (activePlayer.name === "Computer") {
+      message.textContent = "Computer's turn.";
+      computerTurn();
+    } else {
+      message.textContent = "Your turn, pick a cell.";
     }
-    console.log("Game is even!");
   };
 
-  playRound();
+  return {
+    playRound,
+    createPlayers,
+    initializePlayer,
+    assignmarks,
+  };
 }
 
-const game = GameController("User", "Computer");
+const uiInstance = UI();

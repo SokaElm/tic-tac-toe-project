@@ -1,0 +1,17 @@
+.gameGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 200px);
+}
+
+.container {
+  height: 100vh;
+}
+
+.gameGrid > div {
+  height: 200px;
+  width: 200px;
+  text-align: center;
+  font-size: 150px;
+  border: 1px solid black;
+  margin: 0;
+}
